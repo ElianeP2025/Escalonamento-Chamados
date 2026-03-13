@@ -1,0 +1,407 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Nunito', sans-serif; }
+  :root {
+    --f-bg: #FFF0E8; --f-acc: #F4845F; --f-txt: #7A3A1E;
+    --g-bg: #E8F4FF; --g-acc: #5F9BF4; --g-txt: #1E3D7A;
+    --wo-bg: #EDF7F0; --wo-acc: #5CB87A; --wo-txt: #1A5232;
+    --inc-bg: #FFF4E8; --inc-acc: #F4A45F; --inc-txt: #7A3A1E;
+    --rad: 16px;
+  }
+  body { background: #F7F5F2; padding: 16px; }
+
+  .card { background:#FFF; border-radius:var(--rad); padding:18px 20px; border:1px solid #EDE9E3; margin-bottom:14px; }
+
+  .header-card { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+  .header-title { font-size:20px; font-weight:700; color:#3A3530; }
+  .header-sub { font-size:12px; color:#9B8E82; margin-top:2px; }
+  .clock { background:#F7F5F2; border-radius:10px; padding:8px 16px; font-size:22px; font-weight:700; color:#3A3530; letter-spacing:1px; border:1px solid #EDE9E3; }
+
+  .sync-indicator { font-size:10px; color:#9B8E82; display:flex; align-items:center; gap:4px; }
+  .sync-dot { width:6px; height:6px; border-radius:50%; background:#5CB87A; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .schedule-bar { display:flex; border-radius:8px; overflow:hidden; height:28px; margin:10px 0 4px; }
+  .seg { display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; }
+  .seg.f { background:var(--f-bg); color:var(--f-txt); flex:4; border-right:1px solid #EDE9E3; }
+  .seg.s { background:#F0EDE8; color:#6B5E54; flex:4.67; border-right:1px solid #EDE9E3; }
+  .seg.g { background:var(--g-bg); color:var(--g-txt); flex:4.33; }
+  .seg-labels { display:flex; justify-content:space-between; }
+  .seg-lbl { font-size:10px; color:#9B8E82; }
+
+  .zone-badge { display:inline-flex; align-items:center; gap:5px; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; margin-top:8px; }
+  .live-dot { width:7px; height:7px; border-radius:50%; }
+
+  .next-row { display:flex; gap:12px; flex-wrap:wrap; }
+  .next-box { flex:1; min-width:160px; border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; }
+  .next-box.wo { background:var(--wo-bg); border:1.5px solid #A8D9B8; }
+  .next-box.inc { background:var(--inc-bg); border:1.5px solid #F4C48A; }
+  .next-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .next-box.wo .next-dot { background:var(--wo-acc); }
+  .next-box.inc .next-dot { background:var(--inc-acc); }
+  .next-type { font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; }
+  .wo .next-type { color:#4A9B65; }
+  .inc .next-type { color:#C07020; }
+  .next-analyst { font-size:18px; font-weight:700; margin-top:2px; }
+  .wo .next-analyst { color:var(--wo-txt); }
+  .inc .next-analyst { color:var(--inc-txt); }
+  .next-note { font-size:11px; color:#9B8E82; margin-top:2px; }
+
+  .queue-visual { display:flex; gap:6px; margin-top:12px; flex-wrap:wrap; align-items:center; }
+  .q-label { font-size:11px; color:#9B8E82; font-weight:600; }
+  .q-chip { border-radius:20px; padding:3px 10px; font-size:11px; font-weight:700; border:1.5px solid; }
+  .q-chip.F { background:var(--f-bg); color:var(--f-txt); border-color:#F4845F60; }
+  .q-chip.G { background:var(--g-bg); color:var(--g-txt); border-color:#5F9BF460; }
+  .q-chip.next { box-shadow:0 0 0 2px #3A3530; }
+
+  .btn-row { display:flex; gap:10px; margin-bottom:14px; }
+  .btn { border:none; border-radius:12px; padding:14px 20px; font-size:14px; font-weight:700; cursor:pointer; transition:all .15s; flex:1; font-family:'Nunito',sans-serif; }
+  .btn:active { transform:scale(.97); }
+  .btn-wo { background:var(--wo-bg); color:var(--wo-txt); border:1.5px solid #A8D9B8; }
+  .btn-wo:hover { background:#D4EED9; }
+  .btn-inc { background:var(--inc-bg); color:var(--inc-txt); border:1.5px solid #F4C48A; }
+  .btn-inc:hover { background:#FAE3C4; }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+  .analyst-card { background:#FFF; border-radius:var(--rad); padding:16px 18px; border:2px solid transparent; transition:all .2s; }
+  .analyst-card.af { border-color:#F4845F30; }
+  .analyst-card.ag { border-color:#5F9BF430; }
+  .analyst-card.active-f { border-color:var(--f-acc) !important; background:var(--f-bg); }
+  .analyst-card.active-g { border-color:var(--g-acc) !important; background:var(--g-bg); }
+  .avatar { width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; margin-bottom:10px; }
+  .af .avatar { background:var(--f-bg); color:var(--f-txt); border:2px solid var(--f-acc); }
+  .ag .avatar { background:var(--g-bg); color:var(--g-txt); border:2px solid var(--g-acc); }
+  .aname { font-size:15px; font-weight:700; color:#3A3530; }
+  .astatus { font-size:11px; color:#9B8E82; margin-top:2px; }
+  .stat-row { display:flex; gap:7px; margin-top:10px; }
+  .stat-box { flex:1; border-radius:9px; padding:7px 8px; text-align:center; }
+  .stat-box .num { font-size:18px; font-weight:700; }
+  .stat-box .lbl { font-size:10px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; margin-top:1px; }
+  .sb-wo { background:var(--wo-bg); }
+  .sb-wo .num { color:var(--wo-txt); }
+  .sb-wo .lbl { color:#4A9B65; }
+  .sb-inc { background:var(--inc-bg); }
+  .sb-inc .num { color:var(--inc-txt); }
+  .sb-inc .lbl { color:#C07020; }
+
+  .hist-list { display:flex; flex-direction:column; gap:6px; max-height:200px; overflow-y:auto; }
+  .hist-item { display:flex; align-items:center; gap:8px; padding:9px 11px; border-radius:9px; background:#F9F7F4; border:1px solid #EDE9E3; }
+  .hist-pill { border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; flex-shrink:0; }
+  .hist-pill.wo { background:var(--wo-bg); color:var(--wo-txt); }
+  .hist-pill.inc { background:var(--inc-bg); color:var(--inc-txt); }
+  .hist-who { font-size:13px; font-weight:600; color:#3A3530; flex:1; }
+  .hist-analyst { font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; }
+  .hist-analyst.F { background:var(--f-bg); color:var(--f-txt); }
+  .hist-analyst.G { background:var(--g-bg); color:var(--g-txt); }
+  .hist-time { font-size:11px; color:#9B8E82; }
+
+  .section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .section-title { font-size:13px; font-weight:700; color:#3A3530; display:flex; align-items:center; gap:6px; }
+  .badge-count { background:#F0EDE8; border-radius:20px; padding:2px 8px; font-size:11px; color:#9B8E82; }
+  .reset-btn { background:none; border:1px solid #EDE9E3; border-radius:8px; padding:5px 11px; font-size:11px; color:#9B8E82; cursor:pointer; font-family:'Nunito',sans-serif; }
+  .reset-btn:hover { background:#F7F5F2; }
+  .empty { text-align:center; padding:18px; color:#C4B9AE; font-size:13px; }
+
+  .debt-note { font-size:11px; color:#9B8E82; background:#F7F5F2; border-radius:8px; padding:7px 10px; margin-top:10px; border-left:3px solid #EDE9E3; }
+  .debt-note span { font-weight:700; color:#5F9BF4; }
+</style>
+
+<div>
+  <div class="card header-card">
+    <div>
+      <div class="header-title">Central de Chamados</div>
+      <div class="header-sub">Fernando & Gabriel · Fila equilibrada por analista</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="sync-indicator"><div class="sync-dot"></div>Sincronizado</div>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:13px;font-weight:700;color:#3A3530;">Escala do dia</div>
+      <div class="zone-badge" id="zone-badge"><div class="live-dot" id="live-dot"></div><span id="zone-text">—</span></div>
+    </div>
+    <div class="schedule-bar">
+      <div class="seg f">Fernando</div>
+      <div class="seg s">Dividido</div>
+      <div class="seg g">Gabriel</div>
+    </div>
+    <div class="seg-labels">
+      <span class="seg-lbl">07:00</span>
+      <span class="seg-lbl">11:00</span>
+      <span class="seg-lbl">15:40</span>
+      <span class="seg-lbl">20:00</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#9B8E82;margin-bottom:10px;">Próximo chamado</div>
+    <div class="next-row">
+      <div class="next-box wo">
+        <div class="next-dot"></div>
+        <div>
+          <div class="next-type">WO</div>
+          <div class="next-analyst" id="next-wo">—</div>
+          <div class="next-note" id="note-wo"></div>
+        </div>
+      </div>
+      <div class="next-box inc">
+        <div class="next-dot"></div>
+        <div>
+          <div class="next-type">Incidente</div>
+          <div class="next-analyst" id="next-inc">—</div>
+          <div class="next-note" id="note-inc"></div>
+        </div>
+      </div>
+    </div>
+    <div id="debt-area"></div>
+    <div style="margin-top:12px;">
+      <div style="font-size:11px;color:#9B8E82;margin-bottom:6px;font-weight:600;">FILA GLOBAL (próximos turnos):</div>
+      <div class="queue-visual" id="queue-visual"></div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-wo" id="btn-wo" onclick="registerCall('WO')">+ Registrar WO</button>
+    <button class="btn btn-inc" id="btn-inc" onclick="registerCall('Incidente')">+ Registrar Incidente</button>
+  </div>
+
+  <div class="grid-2">
+    <div class="analyst-card af" id="card-f">
+      <div class="avatar">FE</div>
+      <div class="aname">Fernando</div>
+      <div class="astatus" id="status-f">—</div>
+      <div class="stat-row">
+        <div class="stat-box sb-wo"><div class="num" id="f-wo">0</div><div class="lbl">WO</div></div>
+        <div class="stat-box sb-inc"><div class="num" id="f-inc">0</div><div class="lbl">Inc.</div></div>
+      </div>
+    </div>
+    <div class="analyst-card ag" id="card-g">
+      <div class="avatar">GA</div>
+      <div class="aname">Gabriel</div>
+      <div class="astatus" id="status-g">—</div>
+      <div class="stat-row">
+        <div class="stat-box sb-wo"><div class="num" id="g-wo">0</div><div class="lbl">WO</div></div>
+        <div class="stat-box sb-inc"><div class="num" id="g-inc">0</div><div class="lbl">Inc.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-head">
+      <div class="section-title">Histórico de hoje <span class="badge-count" id="hist-count">0</span></div>
+      <button class="reset-btn" onclick="resetAll()">Limpar</button>
+    </div>
+    <div class="hist-list" id="hist-list"><div class="empty">Nenhum chamado registrado hoje</div></div>
+  </div>
+</div>
+
+<script>
+const KEY = 'chamados-v5';
+const SH = true;
+
+let state = { calls: [], queue_turn: 0 };
+// queue_turn: 0 = próximo é Fernando, 1 = próximo é Gabriel
+// A fila global alterna F→G→F→G independente do tipo de chamado.
+// Durante horário exclusivo (Fernando 07-11, Gabriel 15:40-20),
+// o chamado vai forçado para o analista do horário, MAS o turno global
+// NÃO avança — ele acumula "débito" para o analista da vez.
+// Assim quando entrar no horário compartilhado, o analista que ficou
+// com mais chamados "grátis" deve ceder os próximos.
+
+function pad(n){ return String(n).padStart(2,'0'); }
+function nowH(){ const n=new Date(); return n.getHours()+n.getMinutes()/60; }
+function zone(h){
+  if(h>=7&&h<11) return 'F_only';
+  if(h>=11&&h<15+40/60) return 'shared';
+  if(h>=15+40/60&&h<20) return 'G_only';
+  return 'off';
+}
+function todayStr(){ return new Date().toDateString(); }
+
+// Retorna quem seria o "dono" do próximo slot na fila global
+function globalNext(offset=0){
+  return ((state.queue_turn + offset) % 2 === 0) ? 'Fernando' : 'Gabriel';
+}
+
+// Para um tipo de chamado, quem vai receber?
+function getNextFor(type){
+  const z = zone(nowH());
+  if(z==='off') return null;
+  if(z==='F_only') return 'Fernando';
+  if(z==='G_only') return 'Gabriel';
+  // shared: usa a fila global
+  return globalNext(0);
+}
+
+// Explica o motivo (para a nota)
+function getNote(type, z){
+  if(z==='off') return 'Fora do horário';
+  if(z==='F_only') return 'Horário exclusivo Fernando';
+  if(z==='G_only') return 'Horário exclusivo Gabriel';
+  // shared
+  const nxt = globalNext(0);
+  return 'Turno ' + (state.queue_turn % 2 === 0 ? '(posição par)' : '(posição ímpar)') + ' · global';
+}
+
+function registerCall(type){
+  const z = zone(nowH());
+  if(z==='off'){ alert('Fora do horário (07:00–20:00)'); return; }
+
+  const analyst = getNextFor(type);
+  const now = new Date();
+  const timeStr = pad(now.getHours())+':'+pad(now.getMinutes());
+
+  state.calls.push({ analyst, type, time: timeStr, date: todayStr() });
+
+  // Sempre avança a fila global, independente do horário
+  state.queue_turn++;
+
+  saveState();
+  updateUI();
+}
+
+async function loadState(){
+  try {
+    const r = await window.storage.get(KEY, SH);
+    if(r&&r.value){ const s=JSON.parse(r.value); state={ calls:s.calls||[], queue_turn:s.queue_turn||0 }; }
+  } catch(e){}
+  updateUI();
+}
+
+async function saveState(){
+  try{ await window.storage.set(KEY, JSON.stringify(state), SH); } catch(e){}
+}
+
+async function resetAll(){
+  if(!confirm('Limpar histórico de hoje e reiniciar fila?')) return;
+  state.calls = state.calls.filter(c=>c.date!==todayStr());
+  state.queue_turn = 0;
+  await saveState();
+  updateUI();
+}
+
+function updateUI(){
+  const h = nowH();
+  const z = zone(h);
+  const now = new Date();
+  document.getElementById('clock').textContent = pad(now.getHours())+':'+pad(now.getMinutes())+':'+pad(now.getSeconds());
+
+  // zone badge
+  const badge = document.getElementById('zone-badge');
+  const dot = document.getElementById('live-dot');
+  const zt = document.getElementById('zone-text');
+  if(z==='F_only'){ badge.style.cssText='background:#FFF0E8;color:#7A3A1E;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;'; dot.style.background='#F4845F'; zt.textContent='Fernando (07:00–11:00)'; }
+  else if(z==='G_only'){ badge.style.cssText='background:#E8F4FF;color:#1E3D7A;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;'; dot.style.background='#5F9BF4'; zt.textContent='Gabriel (15:40–20:00)'; }
+  else if(z==='shared'){ badge.style.cssText='background:#F0EDE8;color:#4A3F35;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;'; dot.style.background='#888'; zt.textContent='Divisão por categoria (11:00–15:40)'; }
+  else { badge.style.cssText='background:#F0EDE8;color:#9B8E82;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;'; dot.style.background='#9B8E82'; zt.textContent='Fora do horário'; }
+
+  // next boxes
+  const nxt = getNextFor('WO'); // same for both in shared; in exclusive zones same
+  const nxtInc = getNextFor('Incidente');
+
+  // For shared: WO and Inc go to whoever is current in queue
+  // next WO = globalNext(0), next Inc = globalNext(1) IF we showed WO first
+  // But since it's truly one global queue, both show who gets NEXT slot
+  // WO next = globalNext(0), Inc next = globalNext(1)
+  let nWO, nInc, noteWO, noteInc;
+  if(z==='off'){
+    nWO=nInc='—'; noteWO=noteInc='Fora do horário';
+  } else if(z==='F_only'){
+    nWO=nInc='Fernando'; noteWO=noteInc='Horário exclusivo';
+  } else if(z==='G_only'){
+    nWO=nInc='Gabriel'; noteWO=noteInc='Horário exclusivo';
+  } else {
+    nWO = globalNext(0);
+    nInc = globalNext(1);
+    noteWO = 'Turno ' + (state.queue_turn+1) + ' na fila global';
+    noteInc = 'Turno ' + (state.queue_turn+2) + ' na fila global';
+  }
+
+  document.getElementById('next-wo').textContent = nWO;
+  document.getElementById('next-inc').textContent = nInc;
+  document.getElementById('note-wo').textContent = noteWO;
+  document.getElementById('note-inc').textContent = noteInc;
+
+  // Queue visual (next 8 slots)
+  const qv = document.getElementById('queue-visual');
+  if(z==='off'||z==='F_only'||z==='G_only'){
+    qv.innerHTML='<span style="font-size:11px;color:#C4B9AE;">Disponível no horário compartilhado</span>';
+  } else {
+    let html='';
+    for(let i=0;i<8;i++){
+      const who = globalNext(i);
+      const initial = who[0];
+      const isNext = i===0;
+      html+=`<div class="q-chip ${initial}${isNext?' next':''}">${who.substring(0,3)}</div>`;
+      if(i===1) html+=`<span style="font-size:10px;color:#C4B9AE;">···</span>`;
+    }
+    qv.innerHTML=html;
+  }
+
+  // debt note
+  const today = todayStr();
+  const todayCalls = state.calls.filter(c=>c.date===today);
+  const fTotal = todayCalls.filter(c=>c.analyst==='Fernando').length;
+  const gTotal = todayCalls.filter(c=>c.analyst==='Gabriel').length;
+  const diff = fTotal - gTotal;
+  const da = document.getElementById('debt-area');
+  if(z==='shared' && diff!==0){
+    const ahead = diff>0?'Fernando':'Gabriel';
+    const n = Math.abs(diff);
+    da.innerHTML=`<div class="debt-note">⚖ <span>${ahead}</span> tem ${n} chamado${n>1?'s':''} a mais hoje · a fila equilibra automaticamente</div>`;
+  } else { da.innerHTML=''; }
+
+  // analyst cards
+  const cF=document.getElementById('card-f'), cG=document.getElementById('card-g');
+  cF.className='analyst-card af'; cG.className='analyst-card ag';
+  document.getElementById('status-f').textContent='';
+  document.getElementById('status-g').textContent='';
+  if(z==='F_only'){ cF.classList.add('active-f'); document.getElementById('status-f').textContent='Recebendo todos os chamados'; document.getElementById('status-g').textContent='Aguardando'; }
+  else if(z==='G_only'){ cG.classList.add('active-g'); document.getElementById('status-g').textContent='Recebendo todos os chamados'; document.getElementById('status-f').textContent='Turno encerrado'; }
+  else if(z==='shared'){ document.getElementById('status-f').textContent='Turno compartilhado'; document.getElementById('status-g').textContent='Turno compartilhado'; }
+  else { document.getElementById('status-f').textContent='Fora do horário'; document.getElementById('status-g').textContent='Fora do horário'; }
+
+  // stats
+  let fwo=0,finc=0,gwo=0,ginc=0;
+  todayCalls.forEach(c=>{
+    if(c.analyst==='Fernando'&&c.type==='WO') fwo++;
+    if(c.analyst==='Fernando'&&c.type==='Incidente') finc++;
+    if(c.analyst==='Gabriel'&&c.type==='WO') gwo++;
+    if(c.analyst==='Gabriel'&&c.type==='Incidente') ginc++;
+  });
+  document.getElementById('f-wo').textContent=fwo;
+  document.getElementById('f-inc').textContent=finc;
+  document.getElementById('g-wo').textContent=gwo;
+  document.getElementById('g-inc').textContent=ginc;
+
+  // buttons
+  const off = z==='off';
+  document.getElementById('btn-wo').disabled=off;
+  document.getElementById('btn-inc').disabled=off;
+
+  // history
+  document.getElementById('hist-count').textContent=todayCalls.length;
+  const list=document.getElementById('hist-list');
+  if(todayCalls.length===0){
+    list.innerHTML='<div class="empty">Nenhum chamado registrado hoje</div>';
+  } else {
+    list.innerHTML=[...todayCalls].reverse().map((c,i)=>`
+      <div class="hist-item">
+        <span class="hist-pill ${c.type==='WO'?'wo':'inc'}">${c.type}</span>
+        <span class="hist-who">${c.type}</span>
+        <span class="hist-analyst ${c.analyst[0]}">${c.analyst}</span>
+        <span class="hist-time">${c.time}</span>
+      </div>
+    `).join('');
+  }
+}
+
+setInterval(()=>{ updateUI(); },1000);
+setInterval(async()=>{ await loadState(); },5000);
+loadState();
+</script>
