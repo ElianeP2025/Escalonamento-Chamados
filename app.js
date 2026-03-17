@@ -1,7 +1,5 @@
-// app.js
-const SUPABASE_PROJECT_URL = 'https://vvgsbosvzwxpftmdbhje.supabase.co';
+const SUPABASE_FUNCTIONS_BASE = 'https://vvgsbosvzwxpftmdbhje.supabase.co/functions/v1';
 const SUPABASE_ANON_KEY = 'sb_publishable_rO8Q_hsZ8rdFlvJr7UgYig_7DGfNvzm';
-const API_BASE = SUPABASE_PROJECT_URL + '/functions/v1';
 
 let state = { calls: [], queue_turn: 0 };
 
@@ -19,7 +17,7 @@ function globalNext(offset=0){
   return ((state.queue_turn + offset) % 2 === 0) ? 'Fernando' : 'Gabriel';
 }
 
-function getNextFor(){
+function getNextFor(type){
   const z = zone(nowH());
   if(z==='off') return null;
   if(z==='F_only') return 'Fernando';
@@ -27,22 +25,43 @@ function getNextFor(){
   return globalNext(0);
 }
 
-function getNote(type, z){
-  if(z==='off') return 'Fora do horário';
-  if(z==='F_only') return 'Horário exclusivo Fernando';
-  if(z==='G_only') return 'Horário exclusivo Gabriel';
-  return 'Turno ' + (state.queue_turn % 2 === 0 ? '(posição par)' : '(posição ímpar)') + ' · global';
+async function loadState() {
+  try {
+    const res = await fetch(`${SUPABASE_FUNCTIONS_BASE}/get-state`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY
+      }
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Erro ao carregar estado');
+    }
+
+    state = {
+      calls: data.calls || [],
+      queue_turn: data.queue_turn || 0
+    };
+  } catch (e) {
+    console.error('Erro ao carregar estado:', e);
+  }
+
+  updateUI();
 }
 
-async function registerCall(type){
+async function registerCall(type) {
   const z = zone(nowH());
-  if(z==='off'){
+
+  if (z === 'off') {
     alert('Fora do horário (07:00–20:00)');
     return;
   }
 
-  try{
-    const res = await fetch(API_BASE + '/register-call', {
+  try {
+    const res = await fetch(`${SUPABASE_FUNCTIONS_BASE}/register-call`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -53,46 +72,22 @@ async function registerCall(type){
 
     const data = await res.json();
 
-    if(!res.ok){
-      throw new Error(data.error || ('Erro ao registrar: ' + res.status));
+    if (!res.ok) {
+      throw new Error(data.error || 'Falha ao registrar chamado');
     }
 
     await loadState();
-  }catch(err){
-    console.error(err);
+  } catch (e) {
+    console.error('Erro ao registrar chamado:', e);
     alert('Falha ao registrar chamado. Tente novamente.');
   }
 }
 
-async function loadState(){
-  try{
-    const res = await fetch(API_BASE + '/get-state', {
-      method: 'GET',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY
-      }
-    });
+async function resetAll() {
+  if (!confirm('Limpar histórico de hoje e reiniciar fila?')) return;
 
-    const data = await res.json();
-
-    if(!res.ok){
-      throw new Error(data.error || ('Erro ao carregar: ' + res.status));
-    }
-
-    state.queue_turn = data.queue_turn ?? 0;
-    state.calls = data.calls ?? [];
-  }catch(e){
-    console.error('Erro carregando estado', e);
-  }
-
-  updateUI();
-}
-
-async function resetAll(){
-  if(!confirm('Limpar histórico de hoje e reiniciar fila?')) return;
-
-  try{
-    const res = await fetch(API_BASE + '/reset-day', {
+  try {
+    const res = await fetch(`${SUPABASE_FUNCTIONS_BASE}/reset-day`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -102,14 +97,18 @@ async function resetAll(){
 
     const data = await res.json();
 
-    if(!res.ok){
-      throw new Error(data.error || ('Erro reset: ' + res.status));
+    if (!res.ok) {
+      throw new Error(data.error || 'Erro ao resetar');
     }
 
+    state.calls = [];
+    state.queue_turn = 0;
+    updateUI();
+
     await loadState();
-  }catch(err){
-    console.error(err);
-    alert('Falha ao resetar. Tente novamente.');
+  } catch (e) {
+    console.error('Erro ao resetar:', e);
+    alert('Erro ao resetar.');
   }
 }
 
@@ -122,18 +121,38 @@ function updateUI(){
   const badge = document.getElementById('zone-badge');
   const dot = document.getElementById('live-dot');
   const zt = document.getElementById('zone-text');
-  if(z==='F_only'){ badge.style.cssText='background:#FFF0E8;color:#7A3A1E;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;'; dot.style.background='#F4845F'; zt.textContent='Fernando (07:00–11:00)'; }
-  else if(z==='G_only'){ badge.style.cssText='background:#E8F4FF;color:#1E3D7A;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;'; dot.style.background='#5F9BF4'; zt.textContent='Gabriel (15:40–20:00)'; }
-  else if(z==='shared'){ badge.style.cssText='background:#F0EDE8;color:#4A3F35;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;'; dot.style.background='#888'; zt.textContent='Divisão por categoria (11:00–15:40)'; }
-  else { badge.style.cssText='background:#F0EDE8;color:#9B8E82;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;'; dot.style.background='#9B8E82'; zt.textContent='Fora do horário'; }
+
+  if(z==='F_only'){
+    badge.style.cssText='background:#FFF0E8;color:#7A3A1E;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;';
+    dot.style.background='#F4845F';
+    zt.textContent='Fernando (07:00–11:00)';
+  }
+  else if(z==='G_only'){
+    badge.style.cssText='background:#E8F4FF;color:#1E3D7A;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;';
+    dot.style.background='#5F9BF4';
+    zt.textContent='Gabriel (15:40–20:00)';
+  }
+  else if(z==='shared'){
+    badge.style.cssText='background:#F0EDE8;color:#4A3F35;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;';
+    dot.style.background='#888';
+    zt.textContent='Divisão por categoria (11:00–15:40)';
+  }
+  else {
+    badge.style.cssText='background:#F0EDE8;color:#9B8E82;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;';
+    dot.style.background='#9B8E82';
+    zt.textContent='Fora do horário';
+  }
 
   let nWO, nInc, noteWO, noteInc;
   if(z==='off'){
-    nWO=nInc='—'; noteWO=noteInc='Fora do horário';
+    nWO=nInc='—';
+    noteWO=noteInc='Fora do horário';
   } else if(z==='F_only'){
-    nWO=nInc='Fernando'; noteWO=noteInc='Horário exclusivo';
+    nWO=nInc='Fernando';
+    noteWO=noteInc='Horário exclusivo';
   } else if(z==='G_only'){
-    nWO=nInc='Gabriel'; noteWO=noteInc='Horário exclusivo';
+    nWO=nInc='Gabriel';
+    noteWO=noteInc='Horário exclusivo';
   } else {
     nWO = globalNext(0);
     nInc = globalNext(1);
@@ -155,10 +174,10 @@ function updateUI(){
       const who = globalNext(i);
       const initial = who[0];
       const isNext = i===0;
-      html+=`<div class="q-chip ${initial}${isNext?' next':''}">${who.substring(0,3)}</div>`;
-      if(i===1) html+=`<span style="font-size:10px;color:#C4B9AE;">···</span>`;
+      html += `<div class="q-chip ${initial}${isNext?' next':''}">${who.substring(0,3)}</div>`;
+      if(i===1) html += `<span style="font-size:10px;color:#C4B9AE;">···</span>`;
     }
-    qv.innerHTML=html;
+    qv.innerHTML = html;
   }
 
   const today = todayStr();
@@ -167,20 +186,39 @@ function updateUI(){
   const gTotal = todayCalls.filter(c=>c.analyst==='Gabriel').length;
   const diff = fTotal - gTotal;
   const da = document.getElementById('debt-area');
+
   if(z==='shared' && diff!==0){
     const ahead = diff>0?'Fernando':'Gabriel';
     const n = Math.abs(diff);
     da.innerHTML=`<div class="debt-note">⚖ <span>${ahead}</span> tem ${n} chamado${n>1?'s':''} a mais hoje · a fila equilibra automaticamente</div>`;
-  } else { da.innerHTML=''; }
+  } else {
+    da.innerHTML='';
+  }
 
   const cF=document.getElementById('card-f'), cG=document.getElementById('card-g');
-  cF.className='analyst-card af'; cG.className='analyst-card ag';
+  cF.className='analyst-card af';
+  cG.className='analyst-card ag';
   document.getElementById('status-f').textContent='';
   document.getElementById('status-g').textContent='';
-  if(z==='F_only'){ cF.classList.add('active-f'); document.getElementById('status-f').textContent='Recebendo todos os chamados'; document.getElementById('status-g').textContent='Aguardando'; }
-  else if(z==='G_only'){ cG.classList.add('active-g'); document.getElementById('status-g').textContent='Recebendo todos os chamados'; document.getElementById('status-f').textContent='Turno encerrado'; }
-  else if(z==='shared'){ document.getElementById('status-f').textContent='Turno compartilhado'; document.getElementById('status-g').textContent='Turno compartilhado'; }
-  else { document.getElementById('status-f').textContent='Fora do horário'; document.getElementById('status-g').textContent='Fora do horário'; }
+
+  if(z==='F_only'){
+    cF.classList.add('active-f');
+    document.getElementById('status-f').textContent='Recebendo todos os chamados';
+    document.getElementById('status-g').textContent='Aguardando';
+  }
+  else if(z==='G_only'){
+    cG.classList.add('active-g');
+    document.getElementById('status-g').textContent='Recebendo todos os chamados';
+    document.getElementById('status-f').textContent='Turno encerrado';
+  }
+  else if(z==='shared'){
+    document.getElementById('status-f').textContent='Turno compartilhado';
+    document.getElementById('status-g').textContent='Turno compartilhado';
+  }
+  else {
+    document.getElementById('status-f').textContent='Fora do horário';
+    document.getElementById('status-g').textContent='Fora do horário';
+  }
 
   let fwo=0,finc=0,gwo=0,ginc=0;
   todayCalls.forEach(c=>{
@@ -189,6 +227,7 @@ function updateUI(){
     if(c.analyst==='Gabriel'&&c.type==='WO') gwo++;
     if(c.analyst==='Gabriel'&&c.type==='Incidente') ginc++;
   });
+
   document.getElementById('f-wo').textContent=fwo;
   document.getElementById('f-inc').textContent=finc;
   document.getElementById('g-wo').textContent=gwo;
@@ -200,6 +239,7 @@ function updateUI(){
 
   document.getElementById('hist-count').textContent=todayCalls.length;
   const list=document.getElementById('hist-list');
+
   if(todayCalls.length===0){
     list.innerHTML='<div class="empty">Nenhum chamado registrado hoje</div>';
   } else {
@@ -215,8 +255,5 @@ function updateUI(){
 }
 
 setInterval(()=>{ updateUI(); },1000);
-setInterval(()=>{ loadState(); },5000);
+setInterval(async()=>{ await loadState(); },5000);
 loadState();
-
-window.registerCall = registerCall;
-window.resetAll = resetAll;
