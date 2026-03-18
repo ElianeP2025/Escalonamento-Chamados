@@ -67,6 +67,14 @@ function globalNext(offset = 0) {
   return ((state.queue_turn + offset) % 2 === 0) ? 'Fernando' : 'Gabriel';
 }
 
+function getTypeClass(type) {
+  return type === 'WO' ? 'wo' : 'inc';
+}
+
+function getTypeLabel(type) {
+  return type === 'WO' ? 'WO' : 'Incidente';
+}
+
 async function loadState() {
   try {
     const res = await fetch(`${SUPABASE_FUNCTIONS_BASE}/get-state`, {
@@ -128,6 +136,33 @@ async function registerCall(type) {
   }
 }
 
+async function deleteCall(id) {
+  if (!confirm('Deseja apagar este chamado do histórico?')) return;
+
+  try {
+    const res = await fetch(`${SUPABASE_FUNCTIONS_BASE}/delete-call`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ id })
+    });
+
+    const data = await res.json();
+    console.log('Resposta delete-call:', res.status, data);
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Erro ao apagar chamado');
+    }
+
+    await loadState();
+  } catch (e) {
+    console.error('Erro ao apagar chamado:', e);
+    alert('Não foi possível apagar este chamado.');
+  }
+}
+
 async function resetAll() {
   if (!confirm('Limpar histórico de hoje e reiniciar fila?')) return;
 
@@ -160,6 +195,12 @@ async function resetAll() {
 function updateUI() {
   const h = nowH();
   const z = zone(h);
+  const today = todayStr();
+  const todayCalls = state.calls.filter(c => c.date === today);
+
+  const fTotal = todayCalls.filter(c => c.analyst === 'Fernando').length;
+  const gTotal = todayCalls.filter(c => c.analyst === 'Gabriel').length;
+  const diff = fTotal - gTotal;
 
   document.getElementById('clock').textContent = nowClockStr();
 
@@ -197,10 +238,22 @@ function updateUI() {
     nWO = nInc = 'Gabriel';
     noteWO = noteInc = 'Horário exclusivo';
   } else {
-    nWO = globalNext(0);
-    nInc = globalNext(1);
-    noteWO = 'Turno ' + (state.queue_turn + 1) + ' na fila global';
-    noteInc = 'Turno ' + (state.queue_turn + 2) + ' na fila global';
+    if (fTotal > gTotal) {
+      nWO = 'Gabriel';
+      nInc = 'Gabriel';
+      noteWO = `Compensando diferença do dia (${fTotal} x ${gTotal})`;
+      noteInc = `Compensando diferença do dia (${fTotal} x ${gTotal})`;
+    } else if (gTotal > fTotal) {
+      nWO = 'Fernando';
+      nInc = 'Fernando';
+      noteWO = `Compensando diferença do dia (${fTotal} x ${gTotal})`;
+      noteInc = `Compensando diferença do dia (${fTotal} x ${gTotal})`;
+    } else {
+      nWO = globalNext(0);
+      nInc = globalNext(1);
+      noteWO = 'Turno ' + (state.queue_turn + 1) + ' na fila global';
+      noteInc = 'Turno ' + (state.queue_turn + 2) + ' na fila global';
+    }
   }
 
   document.getElementById('next-wo').textContent = nWO;
@@ -213,23 +266,33 @@ function updateUI() {
   if (z === 'off' || z === 'F_only' || z === 'G_only') {
     qv.innerHTML = '<span style="font-size:11px;color:#C4B9AE;">Disponível no horário compartilhado</span>';
   } else {
-    let html = '';
-    for (let i = 0; i < 8; i++) {
-      const who = globalNext(i);
-      const initial = who[0];
-      const isNext = i === 0;
-      html += `<div class="q-chip ${initial}${isNext ? ' next' : ''}">${who.substring(0, 3)}</div>`;
-      if (i === 1) html += `<span style="font-size:10px;color:#C4B9AE;">···</span>`;
+    if (fTotal > gTotal) {
+      qv.innerHTML = `
+        <div class="q-chip G next">Gab</div>
+        <div class="q-chip G">Gab</div>
+        <div class="q-chip G">Gab</div>
+        <span style="font-size:10px;color:#C4B9AE;">até empatar</span>
+      `;
+    } else if (gTotal > fTotal) {
+      qv.innerHTML = `
+        <div class="q-chip F next">Fer</div>
+        <div class="q-chip F">Fer</div>
+        <div class="q-chip F">Fer</div>
+        <span style="font-size:10px;color:#C4B9AE;">até empatar</span>
+      `;
+    } else {
+      let html = '';
+      for (let i = 0; i < 8; i++) {
+        const who = globalNext(i);
+        const initial = who[0];
+        const isNext = i === 0;
+        html += `<div class="q-chip ${initial}${isNext ? ' next' : ''}">${who.substring(0, 3)}</div>`;
+        if (i === 1) html += `<span style="font-size:10px;color:#C4B9AE;">···</span>`;
+      }
+      qv.innerHTML = html;
     }
-    qv.innerHTML = html;
   }
 
-  const today = todayStr();
-  const todayCalls = state.calls.filter(c => c.date === today);
-
-  const fTotal = todayCalls.filter(c => c.analyst === 'Fernando').length;
-  const gTotal = todayCalls.filter(c => c.analyst === 'Gabriel').length;
-  const diff = fTotal - gTotal;
   const da = document.getElementById('debt-area');
 
   if (z === 'shared' && diff !== 0) {
@@ -289,10 +352,11 @@ function updateUI() {
   } else {
     list.innerHTML = [...todayCalls].reverse().map((c) => `
       <div class="hist-item">
-        <span class="hist-pill ${c.type === 'WO' ? 'wo' : 'inc'}">${c.type}</span>
-        <span class="hist-who">${c.type}</span>
+        <span class="hist-pill ${getTypeClass(c.type)}">${getTypeLabel(c.type)}</span>
+        <span class="hist-who">${getTypeLabel(c.type)}</span>
         <span class="hist-analyst ${c.analyst[0]}">${c.analyst}</span>
         <span class="hist-time">${c.time}</span>
+        <button class="hist-delete-btn" onclick="deleteCall(${c.id})" title="Apagar chamado">🗑️</button>
       </div>
     `).join('');
   }
@@ -300,7 +364,14 @@ function updateUI() {
 
 window.registerCall = registerCall;
 window.resetAll = resetAll;
+window.deleteCall = deleteCall;
 
-setInterval(() => { updateUI(); }, 1000);
-setInterval(async () => { await loadState(); }, 5000);
+setInterval(() => {
+  updateUI();
+}, 1000);
+
+setInterval(async () => {
+  await loadState();
+}, 5000);
+
 loadState();
