@@ -1,4 +1,3 @@
-// Configurações do Supabasee fuso horário
 const SUPABASE_FUNCTIONS_BASE = 'https://vvgsbosvzwxpftmdbhje.supabase.co/functions/v1';
 const SUPABASE_ANON_KEY = 'sb_publishable_rO8Q_hsZ8rdFlvJr7UgYig_7DGfNvzm';
 const TIME_ZONE = 'America/Sao_Paulo';
